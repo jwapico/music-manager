@@ -12,6 +12,7 @@ slskd_api_key = os.getenv("SLSKD_API_KEY")
 slskd = slskd_api.SlskdClient("http://localhost:5030", slskd_api_key)
 
 def main():
+    # collect commandline arguments
     parser = argparse.ArgumentParser(description="")
     parser.add_argument("pos_output_path", nargs="?", default=os.getcwd(), help="The output directory in which your files will be downloaded")
     parser.add_argument("--output-path", dest="output_path", help="The output directory in which your files will be downloaded")
@@ -19,24 +20,44 @@ def main():
     args = parser.parse_args()
     OUTPUT_PATH = os.path.abspath(args.output_path or args.pos_output_path)
     SEARCH_QUERY = args.search_query
-
     os.makedirs(OUTPUT_PATH, exist_ok=True)
 
+    # if a search query is provided, download the track
     if SEARCH_QUERY:
         download_track(SEARCH_QUERY, OUTPUT_PATH)
         return 0
 
-def download_track(song: str, output_path: str) -> bool:
-    slskd_success = download_track_slskd(song, output_path)
+def download_track(search_query: str, output_path: str) -> str:
+    """
+    Downloads a track from soulseek or youtube, only downloading from youtube if the query is not found on soulseek
 
-    if not slskd_success:
-        download_track_ytdlp(song, output_path)
+    Args:
+        search_query (str): the song to download, can be a search query
+        output_path (str): the directory to download the song to
 
-    return slskd_success
+    Returns:
+        str: the path to the downloaded file
+    """
+    download_path = download_track_slskd(search_query, output_path)
+
+    if download_path is None:
+        download_path = download_track_ytdlp(search_query, output_path)
+
+    return download_path
 
 # TODO: make the output path work
-def download_track_slskd(song: str, output_path: str) -> bool:
-    results = search_slskd(song)
+def download_track_slskd(search_query: str, output_path: str) -> str:
+    """
+    Attempts to download a track from soulseek
+
+    Args:
+        search_query (str): the song to download, can be a search query
+        output_path (str): the directory to download the song to
+
+    Returns:
+        str: the path to the downloaded song
+    """
+    results = search_slskd(search_query)
 
     if results:
         print(f"Downloading {results[0]['files'][0]['filename']} from user {results[0]['username']}")  
@@ -46,21 +67,29 @@ def download_track_slskd(song: str, output_path: str) -> bool:
         # TODO: check if the download was actually successful, sometimes it returns True but the file is not downloaded
         if download_success:
             print("Download successful")
-            return True
+            return "placeholder slskd download path"
         else:
             print("Download failed")
 
-    return False
+def download_track_ytdlp(search_query: str, output_path: str) -> str :
+    """
+    Downloads a track from youtube using yt-dlp
+    
+    Args:
+        search_query (str): the query to search for
+        output_path (str): the directory to download the song to
 
-def download_track_ytdlp(query: str, output_path: str) -> str :
+    Returns:
+        str: the path to the downloaded song
+    """
     if output_path is None:
         output_path = os.path.dirname(os.path.abspath(__file__))
 
     # TODO: fix empty queries with non english characters ctrl f '大掃除' in sldl_helper.log 
-    search_query = f"ytsearch:{query}".encode("utf-8").decode()
+    search_query = f"ytsearch:{search_query}".encode("utf-8").decode()
     ytdlp_output = ""
 
-    print(f"Downloading from yt-dlp: {query}")
+    print(f"Downloading from yt-dlp: {search_query}")
 
     # download the file using yt-dlp and necessary flags
     process = subprocess.Popen([
@@ -89,11 +118,20 @@ def download_track_ytdlp(query: str, output_path: str) -> str :
 
     return download_path
 
-def search_slskd(query: str) -> list:
-    search = slskd.searches.search_text(query)
+def search_slskd(search_query: str) -> list:
+    """
+    Searches for a track on soulseek
+
+    Args:
+        search_query (str): the query to search for
+
+    Returns:
+        list: a list of search results
+    """
+    search = slskd.searches.search_text(search_query)
     search_id = search["id"]
 
-    print(f"Searching for: '{query}'")
+    print(f"Searching for: '{search_query}'")
     while slskd.searches.state(search_id)["isComplete"] == False:
         print("Searching...")
         time.sleep(1)
