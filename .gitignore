@@ -175,3 +175,5 @@ cython_debug/
 
 app_data/*
 songs/*
+*.mp3
+*.flac

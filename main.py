@@ -20,6 +20,7 @@ def main():
     args = parser.parse_args()
     OUTPUT_PATH = os.path.abspath(args.output_path or args.pos_output_path)
     SEARCH_QUERY = args.search_query
+
     os.makedirs(OUTPUT_PATH, exist_ok=True)
 
     # if a search query is provided, download the track
@@ -82,8 +83,6 @@ def download_track_ytdlp(search_query: str, output_path: str) -> str :
     Returns:
         str: the path to the downloaded song
     """
-    if output_path is None:
-        output_path = os.path.dirname(os.path.abspath(__file__))
 
     # TODO: fix empty queries with non english characters ctrl f '大掃除' in sldl_helper.log 
     search_query = f"ytsearch:{search_query}".encode("utf-8").decode()
