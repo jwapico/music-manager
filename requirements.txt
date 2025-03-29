@@ -1,0 +1,3 @@
+python-dotenv
+slskd-api
+yt-dlp
